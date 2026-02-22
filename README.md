@@ -76,7 +76,7 @@ Follow this routine to maximize your exam performance:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE).
+This project is licensed under the MIT License [LICENSE](LICENSE).
 This project is a modified and extended version of the original NeoPass repository.
 
 </samp>
