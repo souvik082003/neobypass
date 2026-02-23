@@ -73,7 +73,6 @@ Follow this routine to maximize your exam performance:
 
 ---
 
-
 ## License
 
 This project is licensed under the MIT License [LICENSE](LICENSE).
