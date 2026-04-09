@@ -85,20 +85,26 @@ function bypassRestrictions() {
     });
 
     // Override visibility state properties
-    Object.defineProperty(document, "visibilityState", {
-        get: () => "visible",
-        configurable: true
-    });
+    try {
+        Object.defineProperty(document, "visibilityState", {
+            get: () => "visible",
+            configurable: true
+        });
+    } catch (e) {}
 
-    Object.defineProperty(document, 'webkitVisibilityState', {
-        get: () => "visible",
-        configurable: true
-    });
+    try {
+        Object.defineProperty(document, 'webkitVisibilityState', {
+            get: () => "visible",
+            configurable: true
+        });
+    } catch (e) {}
 
-    Object.defineProperty(document, "hidden", {
-        get: () => false,
-        configurable: true
-    });
+    try {
+        Object.defineProperty(document, "hidden", {
+            get: () => false,
+            configurable: true
+        });
+    } catch (e) {}
 }
 
 // Function to spoof screen recording behavior
@@ -250,5 +256,10 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
 }
 
 // Initialize bypasses and observer
-bypassRestrictions();
+// Initialize bypasses and observer
+const currentUrl = window.location.href.toLowerCase();
+const isSafePage = currentUrl.includes('/dashboard') || currentUrl.includes('/mycourses') || currentUrl.includes('/login') || currentUrl.includes('/profile');
+if (!isSafePage) {
+    bypassRestrictions();
+}
 spoofScreenRecording();

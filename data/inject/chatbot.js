@@ -450,7 +450,7 @@ if (typeof window.isMac === 'undefined') {
         let resizeStartY;
 
         const fontLink = document.createElement('link');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap';
+        
         fontLink.rel = 'stylesheet';
         document.head.appendChild(fontLink);
 
@@ -802,7 +802,7 @@ if (typeof window.isMac === 'undefined') {
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
                 z-index: 2147483647;
                 flex-direction: column;
-                font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 overflow: hidden;
                 transition: opacity 0.3s ease;
                 pointer-events: auto;
@@ -841,7 +841,7 @@ if (typeof window.isMac === 'undefined') {
                 font-size: 14px !important; 
                 cursor: pointer !important; 
                 padding: 6px 12px !important;
-                font-family: 'Poppins', sans-serif !important;
+                font-family: sans-serif !important;
                 background: white !important;
                 border: none !important;
                 border-radius: 6px !important;
@@ -894,7 +894,7 @@ if (typeof window.isMac === 'undefined') {
         color: #333;
         min-height: 24px;
         max-height: 120px;
-        font-family: 'Poppins', sans-serif;
+        font-family: sans-serif;
         font-size: 14px;
         line-height: 1.5;
         font-weight: 400;
@@ -1126,7 +1126,7 @@ if (typeof window.isMac === 'undefined') {
             const checkboxLabel = document.createElement("label");
             checkboxLabel.htmlFor = "chat-about-question-checkbox";
             checkboxLabel.style.cssText = `
-        font-family: 'Poppins', sans-serif;
+        font-family: sans-serif;
         font-size: 13px;
         color: #666;
         cursor: pointer;
@@ -1287,7 +1287,7 @@ if (typeof window.isMac === 'undefined') {
         transition: all 0.2s ease;
         flex-shrink: 0;
         box-shadow: 0 2px 4px rgba(60, 84, 114, 0.2);  /* Updated shadow color to match */
-        font-family: 'Poppins', sans-serif;
+        font-family: sans-serif;
         `;
 
             // Create send button
@@ -1461,7 +1461,7 @@ if (typeof window.isMac === 'undefined') {
             // Create comprehensive CSS reset and styles for shadow DOM
             const shadowStyles = document.createElement('style');
             shadowStyles.textContent = `
-                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+                
                 
                 /* CSS Reset for Shadow DOM */
                 * {
@@ -1480,7 +1480,7 @@ if (typeof window.isMac === 'undefined') {
                     border: none;
                     background: none;
                     color: inherit;
-                    font-family: 'Poppins', sans-serif;
+                    font-family: sans-serif;
                 }
                 
                 input[type="checkbox"] {
@@ -1491,7 +1491,7 @@ if (typeof window.isMac === 'undefined') {
                 
                 label {
                     cursor: pointer;
-                    font-family: 'Poppins', sans-serif;
+                    font-family: sans-serif;
                 }
                 
                 pre {
@@ -1937,7 +1937,7 @@ if (typeof window.isMac === 'undefined') {
                 font-size: 12px;
                 text-align: center;
                 border: 1px solid #dde;
-                font-family: 'Poppins', sans-serif;
+                font-family: sans-serif;
             `;
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1968,7 +1968,7 @@ if (typeof window.isMac === 'undefined') {
             // Create comprehensive CSS reset for button shadow DOM
             const buttonStyles = document.createElement('style');
             buttonStyles.textContent = `
-                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+                
                 
                 /* CSS Reset for Button Shadow DOM */
                 * {
@@ -1983,7 +1983,7 @@ if (typeof window.isMac === 'undefined') {
                     margin: 0;
                     background: none;
                     outline: none;
-                    font-family: 'Poppins', sans-serif;
+                    font-family: sans-serif;
                 }
                 
                 svg {
@@ -2401,7 +2401,7 @@ if (typeof window.isMac === 'undefined') {
                             cursor: pointer;
                             padding: 6px 12px;
                             font-size: 12px;
-                            font-family: 'Poppins', sans-serif;
+                            font-family: sans-serif;
                             opacity: 0;
                             transition: opacity 0.2s ease;
                             z-index: 10;
@@ -2521,7 +2521,7 @@ if (typeof window.isMac === 'undefined') {
                 border: 1px solid ${isRateLimitError ? '#ffeaa7' : '#f5c6cb'};
                 color: ${isRateLimitError ? '#856404' : '#721c24'};
                 align-self: flex-start;
-                font-family: 'Poppins', sans-serif;
+                font-family: sans-serif;
                 position: relative;
             `;
 
@@ -2593,7 +2593,7 @@ if (typeof window.isMac === 'undefined') {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-family: 'Poppins', sans-serif;
+        font-family: sans-serif;
         font-size: 14px;
         color: rgba(0, 0, 0, 0.6);
         `;

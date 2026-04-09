@@ -2,8 +2,8 @@
 const shortcutStates = {
   'search': false,
   'search-mcq': false,
-  'nptel': false,
-  'customPaste': false
+  'customPaste': false,
+  'ai-solve': false
 };
 
 // Request blocking mechanism to prevent multiple simultaneous API requests
@@ -214,397 +214,6 @@ setInterval(getInstalledExtensions, 3000);
 // Listen for internal messages
 chrome.runtime.onMessage.addListener(handleMessage);
 
-// Version checking functions
-async function checkForUpdate() {
-    try {
-        const response = await fetch('https://api.github.com/repos/Max-Eee/NeoPass/releases/latest');
-        const data = await response.json();
-        const latestVersion = data.tag_name.replace('v', '');
-        const currentVersion = chrome.runtime.getManifest().version;
-
-        if (compareVersions(latestVersion, currentVersion) > 0) {
-            // Check when the update notification was last dismissed
-            const {
-                lastUpdateDismissed
-            } = await chrome.storage.local.get(['lastUpdateDismissed']);
-            const currentTime = Date.now();
-
-            // Show notification if never dismissed or if 5 hours (18000000 ms) have passed
-            const showNotificationTimeout = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
-
-            if (!lastUpdateDismissed || (currentTime - lastUpdateDismissed) > showNotificationTimeout) {
-                // Get the active tab but check if it's a valid tab for script injection
-                chrome.tabs.query({
-                    active: true,
-                    currentWindow: true
-                }, function(tabs) {
-                    if (tabs[0] && tabs[0].url &&
-                        !tabs[0].url.startsWith('chrome://') &&
-                        !tabs[0].url.startsWith('chrome-extension://') &&
-                        !tabs[0].url.startsWith('about:') &&
-                        !tabs[0].url.startsWith('edge://') &&
-                        !tabs[0].url.startsWith('brave://')) {
-
-                        showUpdateToast(tabs[0].id,
-                            `Update Available: v${latestVersion}\nSome features may not work. Please update your extension.`,
-                            latestVersion
-                        );
-                    } else {
-                        // Store the update info to show later when on a valid page
-                        chrome.storage.local.set({
-                            'pendingUpdateNotification': true,
-                            'pendingUpdateVersion': latestVersion
-                        });
-                        console.log('Update available but current tab is not injectable. Will show notification later.');
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Failed to check for updates:', error);
-    }
-}
-
-function compareVersions(v1, v2) {
-    const v1Parts = v1.split('.').map(Number);
-    const v2Parts = v2.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-        const v1Part = v1Parts[i] || 0;
-        const v2Part = v2Parts[i] || 0;
-        if (v1Part > v2Part) return 1;
-        if (v1Part < v2Part) return -1;
-    }
-    return 0;
-}
-
-function showUpdateToast(tabId, message, latestVersion) {
-    // First check if the tab is valid for script injection
-    chrome.tabs.get(tabId, async (tab) => {
-        // Handle potential error if tab no longer exists
-        if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError.message);
-            return;
-        }
-
-        // Verify tab is a valid target for script injection
-        if (!tab.url ||
-            tab.url.startsWith('chrome://') ||
-            tab.url.startsWith('chrome-extension://') ||
-            tab.url.startsWith('about:') ||
-            tab.url.startsWith('edge://') ||
-            tab.url.startsWith('brave://')) {
-
-            console.log('Cannot inject script into this tab type');
-            return;
-        }
-
-        // Proceed with script injection for valid tabs
-        try {
-            // Remove any existing toasts first
-            await removeExistingToast(tabId);
-            
-            // Use a promise wrapper to handle errors silently
-            const executeScriptPromise = async () => {
-                try {
-                    await chrome.scripting.executeScript({
-                        target: {
-                            tabId: tabId
-                        },
-                        func: function(msg, version) {
-                            // Create gradient background container
-                            const gradientContainer = document.createElement('div');
-                            gradientContainer.style.cssText = `
-                                position: fixed;
-                                top: 20px;
-                                right: 20px;
-                                padding: 1px;
-                                background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-                                border-radius: 8px;
-                                z-index: 10000;
-                                cursor: pointer;
-                                animation: fadeIn 0.3s ease-in;
-                            `;
-
-                            // Add a unique ID to identify the toast
-                            gradientContainer.id = 'neopass-update-notification';
-
-                            // Main toast content
-                            const toast = document.createElement('div');
-                            toast.style.cssText = `
-                                position: relative;
-                                background-color: rgba(0, 0, 0, 0.8);
-                                backdrop-filter: blur(8px);
-                                color: white;
-                                padding: 16px;
-                                border-radius: 7px;
-                                font-family: monospace;
-                                min-width: 300px;
-                                border: 1px solid rgba(255, 255, 255, 0.1);
-                                transition: background-color 0.2s;
-                            `;
-
-                            // Header container with NeoPass title and close button
-                            const header = document.createElement('div');
-                            header.style.cssText = `
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 12px;
-                                padding-bottom: 8px;
-                                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                            `;
-
-                            // NeoPass title
-                            const title = document.createElement('div');
-                            title.innerHTML = 'NeoPass Extension';
-                            title.style.cssText = `
-                                font-size: 16px;
-                                font-weight: bold;
-                                background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-                                -webkit-background-clip: text;
-                                background-clip: text;
-                                color: transparent;
-                            `;
-
-                            const closeBtn = document.createElement('span');
-                            closeBtn.innerHTML = '&times;';
-                            closeBtn.style.cssText = `
-                                cursor: pointer;
-                                font-size: 20px;
-                                color: rgba(255, 255, 255, 0.8);
-                                transition: color 0.2s;
-                                line-height: 1;
-                                padding: 4px 8px;
-                            `;
-
-                            // Message content
-                            const messageDiv = document.createElement('div');
-                            messageDiv.innerHTML = msg.replace('\n', '<br>');
-                            messageDiv.style.marginBottom = '12px';
-
-                            // Links container
-                            const linksContainer = document.createElement('div');
-                            linksContainer.style.cssText = `
-                                display: flex;
-                                gap: 8px;
-                                margin-top: 12px;
-                            `;
-
-                            // Create links
-                            const createLink = (text, url) => {
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.innerHTML = text;
-                                link.style.cssText = `
-                                    background: rgba(255, 255, 255, 0.1);
-                                    color: white;
-                                    text-decoration: none;
-                                    padding: 6px 12px;
-                                    border-radius: 4px;
-                                    font-size: 12px;
-                                    transition: all 0.2s;
-                                    flex: 1;
-                                    text-align: center;
-                                    border: 1px solid rgba(255, 255, 255, 0.1);
-                                `;
-                                link.onmouseover = (e) => {
-                                    link.style.background = 'rgba(255, 255, 255, 0.2)';
-                                };
-                                link.onmouseout = (e) => {
-                                    link.style.background = 'rgba(255, 255, 255, 0.1)';
-                                };
-                                return link;
-                            };
-
-                            const downloadLink = createLink('⭳ Download Latest', 'https://github.com/Max-Eee/NeoPass/archive/refs/heads/main.zip');
-                            const websiteLink = createLink('Website', 'https://freeneopass.vercel.app');
-
-                            // Add hover effects
-                            gradientContainer.onmouseover = () => {
-                                toast.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-                            };
-                            gradientContainer.onmouseout = () => {
-                                toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                            };
-
-                            closeBtn.onmouseover = (e) => {
-                                closeBtn.style.color = 'white';
-                            };
-                            closeBtn.onmouseout = (e) => {
-                                closeBtn.style.color = 'rgba(255, 255, 255, 0.8)';
-                            };
-
-                            // Click handlers
-                            gradientContainer.onclick = (e) => {
-                                if (e.target === gradientContainer || e.target === toast || e.target === messageDiv) {
-                                    window.open('https://github.com/Max-Eee/NeoPass/releases/latest');
-                                }
-                            };
-
-                            // Modified close button handler to store dismissal time
-                            closeBtn.onclick = (e) => {
-                                e.stopPropagation(); // Prevent triggering the container's click
-                                gradientContainer.style.animation = 'fadeOut 0.3s ease-out';
-                                setTimeout(() => gradientContainer.remove(), 280);
-
-                                // Store the dismissal time
-                                chrome.runtime.sendMessage({
-                                    action: "updateDismissed",
-                                    version: version,
-                                    timestamp: Date.now()
-                                });
-                            };
-
-                            // Listen for dismissal message from other tabs
-                            chrome.runtime.onMessage.addListener((message) => {
-                                if (message.action === "removeUpdateNotification") {
-                                    if (gradientContainer && gradientContainer.parentElement) {
-                                        gradientContainer.style.animation = 'fadeOut 0.3s ease-out';
-                                        setTimeout(() => gradientContainer.remove(), 280);
-                                    }
-                                }
-                            });
-
-                            // Add animation styles
-                            const style = document.createElement('style');
-                            style.textContent = `
-                                @keyframes fadeIn {
-                                    from { opacity: 0; transform: translateY(-20px); }
-                                    to { opacity: 1; transform: translateY(0); }
-                                }
-                                @keyframes fadeOut {
-                                    from { opacity: 1; transform: translateY(0); }
-                                    to { opacity: 0; transform: translateY(-20px); }
-                                }
-                            `;
-                            document.head.appendChild(style);
-
-                            // Assemble and append
-                            header.appendChild(title);
-                            header.appendChild(closeBtn);
-                            linksContainer.appendChild(downloadLink);
-                            linksContainer.appendChild(websiteLink);
-
-                            toast.appendChild(header);
-                            toast.appendChild(messageDiv);
-                            toast.appendChild(linksContainer);
-
-                            gradientContainer.appendChild(toast);
-
-                            // Remove existing update toast if any
-                            const existingToast = document.getElementById('neopass-update-notification');
-                            if (existingToast) {
-                                existingToast.remove();
-                            }
-
-                            document.body.appendChild(gradientContainer);
-                        },
-                        args: [message, latestVersion]
-                    });
-                } catch (err) {
-                    // Silently handle the error and store notification for showing later
-                    // without logging to console
-                    chrome.storage.local.set({
-                        'pendingUpdateNotification': true,
-                        'pendingUpdateVersion': latestVersion
-                    });
-                }
-            };
-
-            // Execute the script with silent error handling
-            executeScriptPromise();
-
-        } catch (error) {
-            // Only log truly unexpected errors
-            console.error('Error in showUpdateToast:', error);
-        }
-    });
-}
-
-// Add listener for tab updates to show pending notifications
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Only check when page is fully loaded
-    if (changeInfo.status === 'complete' && tab.url &&
-        !tab.url.startsWith('chrome://') &&
-        !tab.url.startsWith('chrome-extension://') &&
-        !tab.url.startsWith('about:') &&
-        !tab.url.startsWith('edge://') &&
-        !tab.url.startsWith('brave://')) {
-
-        // Check for pending notifications
-        chrome.storage.local.get(['pendingUpdateNotification', 'pendingUpdateVersion'], function(data) {
-            if (data.pendingUpdateNotification) {
-                // Clear the pending flag
-                chrome.storage.local.set({
-                    'pendingUpdateNotification': false
-                });
-
-                // Show the notification
-                showUpdateToast(tab.id,
-                    `Update Available: v${data.pendingUpdateVersion}\nSome features may not work. Please update your extension.`,
-                    data.pendingUpdateVersion
-                );
-            }
-        });
-
-        // Standard update check logic (shows on every tab until dismissed)
-        checkForUpdate();
-    }
-});
-
-// Set up an alarm for update checking
-function setupUpdateAlarm() {
-    chrome.alarms.get('updateCheck', (alarm) => {
-        // If alarm doesn't exist, create it
-        if (!alarm) {
-            chrome.alarms.create('updateCheck', {
-                // Check twice per day
-                periodInMinutes: 12 * 60
-            });
-        }
-    });
-}
-
-// Listen for alarm
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'updateCheck') {
-        checkForUpdate();
-    }
-});
-
-// Set up alarm when extension starts
-chrome.runtime.onStartup.addListener(setupUpdateAlarm);
-
-// Also set up alarm on install
-chrome.runtime.onInstalled.addListener((details) => {
-    setupUpdateAlarm();
-    // Also do an immediate check on install/update
-    if (details.reason === 'update' || details.reason === 'install') {
-        checkForUpdate();
-    }
-});
-
-// Additional listener for update dismissal messages from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "updateDismissed") {
-        chrome.storage.local.set({
-            lastUpdateDismissed: message.timestamp,
-            lastUpdateVersion: message.version
-        });
-        
-        // Broadcast to all tabs to remove the notification
-        chrome.tabs.query({}, (tabs) => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: "removeUpdateNotification"
-                }).catch(() => {
-                    // Ignore errors for tabs that can't receive messages
-                });
-            });
-        });
-    }
-});
 
 
 
@@ -634,11 +243,6 @@ chrome.runtime.onInstalled.addListener(() => {
             id: 'separator2',
             type: 'separator',
             contexts: ['editable', 'selection']
-        });
-        chrome.contextMenus.create({
-            id: 'nptel',
-            title: 'NPTEL',
-            contexts: ['selection']
         });
         // Add new menu item for IamNeo/Examly questions
         chrome.contextMenus.create({
@@ -697,15 +301,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                 console.error('Context menu MCQ error:', error);
                 showToast(tab.id, 'MCQ search failed. Please try again.', true, 'An error occurred while processing your MCQ request.');
             });
-        }
-        if (info.menuItemId === 'nptel') {
-            if (info.selectionText) {
-                handleNPTEL({
-                    result: info.selectionText
-                }, tab.id); 
-            } else {
-                showToast(tab.id, 'No text selected', true);
-            }
         }
         // Add handler for the new menu item
         if (info.menuItemId === 'solveExamly') {
@@ -768,6 +363,12 @@ chrome.commands.onCommand.addListener((command, tab) => {
         }
 
         shortcutStates[command] = true; // Mark the shortcut as being processed
+
+        if (command === 'ai-solve') {
+            chrome.tabs.sendMessage(tab.id, { action: 'solveIamneoExamly' });
+            shortcutStates[command] = false;
+            return;
+        }
 
         if (command === 'search') {
             chrome.scripting.executeScript({
@@ -858,20 +459,6 @@ chrome.commands.onCommand.addListener((command, tab) => {
                 }
             });
         }
-
-        if (command === 'nptel') {
-            chrome.scripting.executeScript({
-                target: {
-                    tabId: tab.id
-                },
-                function: getSelectedText
-            }, (results) => {
-                if (results[0] && results[0].result) {
-                    handleNPTEL(results[0], tab.id); // Pass result[0] and tab.id
-                }
-                shortcutStates[command] = false; // Reset the state after processing
-            });
-        }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -898,36 +485,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 
-function handleNPTEL(result, tabId) {
-    const selectedText = result.result; // Access result.result here
-    if (selectedText) {
-        // Call your findAnswer function or do the NPTEL search
-        const bestAnswers = findAnswer(selectedText); // Expecting an array of answers
-
-        if (bestAnswers) {
-            if (Array.isArray(bestAnswers) && bestAnswers.length > 0) {
-                // Deduplicate answers - convert to Set and back to Array to remove duplicates
-                const uniqueAnswers = [...new Set(bestAnswers)];
-                
-                // Prepare the display string with indexing
-                let answersString;
-                if (uniqueAnswers.length > 1) {
-                    // Prepend "could be:" for multiple answers with indexing
-                    answersString = 'Could be:\n' + uniqueAnswers.map((answer, index) => `${index + 1}. ${answer}`).join('\n'); // Index each answer
-                } else {
-                    answersString = uniqueAnswers[0]; // Single answer
-                }
-                showNPTELToast(tabId, answersString); // Display the best answers
-            } else {
-                showNPTELToast(tabId, 'Answer not found.\nPlease select only the question.', true);
-            }
-        } else {
-            showNPTELToast(tabId, 'Answer not found.\nPlease select only the question.', true);
-        }
-    } else {
-        showNPTELToast(tabId, 'No text selected', true);
-    }
-}
 
 
 // Helper functions
@@ -1299,7 +856,13 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
                 break;
                 
             case 'google':
-                const googleModel = modelName || 'gemini-2.5-flash';
+                let googleModel = modelName || 'gemini-pro';
+                
+                // Clean user input
+                if (googleModel.includes('/')) {
+                    googleModel = googleModel.split('/').pop();
+                }
+                
                 apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent?key=${apiKey}`;
                 headers = {
                     'Content-Type': 'application/json'
@@ -1520,10 +1083,12 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
                             Stricly Passes all test cases, including edge cases and boundary conditions.
                             Always get the input from the users.` +
                             `Question:\n${request.question}\n\n` +
-                            (request.programmingLanguage ? `Solve Striclty Using This Programing Language:\n${request.programmingLanguage}` : '') +
-                        (request.inputFormat ? `Input Format:\n${request.inputFormat}\n\n` : '') +
-                        (request.outputFormat ? `Output Format:\n${request.outputFormat}\n\n` : '') +
-                        (request.testCases ? `Test Cases:\n${request.testCases}` : '');
+                            (request.headerSnippet ? `Header Snippet (Starter code prefix):\n${request.headerSnippet}\n\n` : '') +
+                            (request.programmingLanguage ? `Solve Striclty Using This Programing Language:\n${request.programmingLanguage}\n` : '') +
+                            (request.inputFormat ? `Input Format:\n${request.inputFormat}\n\n` : '') +
+                            (request.outputFormat ? `Output Format:\n${request.outputFormat}\n\n` : '') +
+                            (request.testCases ? `Test Cases:\n${request.testCases}\n` : '') +
+                            (request.footerSnippet ? `Footer Snippet (System execution code suffix that you shouldn't modify):\n${request.footerSnippet}\n\n` : '');
                     }
                 } else {
                     // MCQ handling with support for multiple choice
@@ -2754,78 +2319,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep the message channel open for async response
 });
 
-// NPTEL Integration
-function findAnswer(query) {
-    const normalizedQuery = normalizeText(query); // Normalize the query
-    const bestAnswers = []; // Array to store the best answers
-    let smallestDistance = Infinity; // Track the smallest distance
-
-    for (const item of dataset) {
-        const normalizedQuestion = normalizeText(item.question); // Normalize the question
-        const distance = levenshteinDistance(normalizedQuery, normalizedQuestion);
-
-        // If the distance is within the threshold
-        const threshold = 15; // Adjust this value based on your needs
-        if (distance <= threshold) {
-            if (distance < smallestDistance) {
-                smallestDistance = distance; // Update smallest distance
-                bestAnswers.length = 0; // Clear previous answers
-                bestAnswers.push(item.answer); // Store the new best answer
-            } else if (distance === smallestDistance) {
-                bestAnswers.push(item.answer); // Add to the list of best answers
-            }
-        }
-    }
-
-    return bestAnswers.length > 0 ? bestAnswers : null; // Return the best answers or null if none found
-}
-
-// Function to calculate the Levenshtein distance
-function levenshteinDistance(s1, s2) {
-    const dp = Array(s1.length + 1).fill(null).map(() => Array(s2.length + 1).fill(0));
-
-    for (let i = 0; i <= s1.length; i++) {
-        for (let j = 0; j <= s2.length; j++) {
-            if (i === 0) {
-                dp[i][j] = j; // Deletions
-            } else if (j === 0) {
-                dp[i][j] = i; // Additions
-            } else {
-                dp[i][j] = Math.min(
-                    dp[i - 1][j] + 1, // Deletion
-                    dp[i][j - 1] + 1, // Insertion
-                    dp[i - 1][j - 1] + (s1[i - 1] === s2[j - 1] ? 0 : 1) // Substitution
-                );
-            }
-        }
-    }
-    return dp[s1.length][s2.length];
-}
-
-// Normalization function to clean up the text
-function normalizeText(text) {
-    return text
-        .toLowerCase() // Convert to lowercase
-        .replace(/[-]/g, ' ') // Replace dashes with spaces
-        .replace(/[^\w\s]/g, '') // Remove all non-word characters (except whitespace)
-        .trim(); // Trim leading and trailing spaces
-}
-
-// Load NPTEL dataset from JSON file
-let dataset = [];
-async function loadNptelDataset() {
-    try {
-        const response = await fetch(chrome.runtime.getURL('data/nptel.json'));
-        dataset = await response.json();
-        console.log(`NPTEL dataset loaded: ${dataset.length} questions`);
-    } catch (error) {
-        console.error('Failed to load NPTEL dataset:', error);
-    }
-}
-
-// Load dataset on initialization
-loadNptelDataset();
-
 // Update showMCQToast to use the current opacity level and include info button
 async function showMCQToast(tabId, message, detailedInfo = '') {
     const opacity = await getToastOpacity();
@@ -3070,219 +2563,6 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
     });
 }
 
-// Update showNPTELToast to use the current opacity level and include info button
-async function showNPTELToast(tabId, message, isError = false, detailedInfo = '') {
-    const opacity = await getToastOpacity();
-    
-    // Set default detailed info if not provided
-    if (!detailedInfo) {
-        if (isError) {
-            detailedInfo = 'Possible issues with NPTEL search:\n• The question may not be in our database\n• Try selecting only the exact question text\n• The question might be newly added to NPTEL';
-        } else {
-            detailedInfo = 'This answer was found by matching your question with the NPTEL question database. The confidence level depends on how closely your selected text matches a known question.';
-        }
-    }
-
-    // Remove any existing toast first
-    await removeExistingToast(tabId);
-
-    chrome.scripting.executeScript({
-        target: {
-            tabId: tabId
-        },
-        func: function(msg, isError, opacity, detailedInfo) {
-            // Create toast container
-            const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Add ID for tracking
-            toast.style.position = 'fixed';
-            toast.style.bottom = '20px';
-            toast.style.left = '50%';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.backgroundColor = isError ? 'rgba(40, 10, 10, 0.95)' : 'rgba(15, 15, 20, 0.95)';
-            toast.style.color = isError ? '#ff6b6b' : '#f8f9fa';
-            toast.style.padding = '14px 16px';
-            toast.style.borderRadius = '8px';
-            toast.style.zIndex = '999999';
-            toast.style.opacity = opacity;
-            toast.style.transition = 'all 0.3s ease';
-            toast.style.maxWidth = '320px';
-            toast.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            toast.style.border = isError ? '1px solid rgba(255, 107, 107, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)';
-            toast.style.backdropFilter = 'blur(10px)';
-            toast.style.WebkitBackdropFilter = 'blur(10px)';
-            
-            // Create header container
-            const headerContainer = document.createElement('div');
-            headerContainer.style.display = 'flex';
-            headerContainer.style.justifyContent = 'space-between';
-            headerContainer.style.alignItems = 'flex-start';
-            
-            // Create message container
-            const messageContainer = document.createElement('div');
-            messageContainer.style.flexGrow = '1';
-            messageContainer.style.marginRight = '12px';
-            
-            // Add indicator dot
-            const indicatorDot = document.createElement('span');
-            indicatorDot.style.display = 'inline-block';
-            indicatorDot.style.width = '8px';
-            indicatorDot.style.height = '8px';
-            indicatorDot.style.backgroundColor = isError ? '#ff6b6b' : '#4ade80';
-            indicatorDot.style.borderRadius = '50%';
-            indicatorDot.style.marginRight = '8px';
-            indicatorDot.style.boxShadow = isError ? '0 0 4px rgba(255, 107, 107, 0.6)' : '0 0 4px rgba(74, 222, 128, 0.6)';
-            
-            // Add message text
-            const messageText = document.createElement('span');
-            messageText.innerHTML = msg.replace(/\n/g, '<br>'); // Use innerHTML to handle newlines
-            messageText.style.fontSize = '14px';
-            messageText.style.fontWeight = '500';
-            messageText.style.lineHeight = '1.4';
-            messageText.style.wordBreak = 'break-word';
-            
-            // Combine dot and text
-            const messageContent = document.createElement('div');
-            messageContent.style.display = 'flex';
-            messageContent.style.alignItems = 'center';
-            messageContent.appendChild(indicatorDot);
-            messageContent.appendChild(messageText);
-            
-            messageContainer.appendChild(messageContent);
-            
-            // Create buttons container
-            const buttonsContainer = document.createElement('div');
-            buttonsContainer.style.display = 'flex';
-            buttonsContainer.style.alignItems = 'center';
-            buttonsContainer.style.marginLeft = '8px';
-            
-            // Info button
-            const infoBtn = document.createElement('button');
-            infoBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-            infoBtn.title = 'Show more information';
-            infoBtn.style.background = 'none';
-            infoBtn.style.border = 'none';
-            infoBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-            infoBtn.style.cursor = 'pointer';
-            infoBtn.style.padding = '2px';
-            infoBtn.style.marginRight = '6px';
-            infoBtn.style.borderRadius = '4px';
-            infoBtn.style.lineHeight = '0';
-            infoBtn.style.transition = 'all 0.2s';
-            
-            // Close button
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-            closeBtn.title = 'Close';
-            closeBtn.style.background = 'none';
-            closeBtn.style.border = 'none';
-            closeBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-            closeBtn.style.cursor = 'pointer';
-            closeBtn.style.padding = '2px';
-            closeBtn.style.borderRadius = '4px';
-            closeBtn.style.lineHeight = '0';
-            closeBtn.style.transition = 'all 0.2s';
-
-            // Detailed info container (initially hidden)
-            const detailedInfoContainer = document.createElement('div');
-            detailedInfoContainer.style.marginTop = '12px';
-            detailedInfoContainer.style.padding = '10px 12px';
-            detailedInfoContainer.style.backgroundColor = isError ? 'rgba(255, 107, 107, 0.1)' : 'rgba(255, 255, 255, 0.1)';
-            detailedInfoContainer.style.borderRadius = '6px';
-            detailedInfoContainer.style.fontSize = '13px';
-            detailedInfoContainer.style.display = 'none';
-            detailedInfoContainer.style.maxHeight = '120px';
-            detailedInfoContainer.style.overflow = 'auto';
-            detailedInfoContainer.style.lineHeight = '1.4';
-            detailedInfoContainer.style.color = isError ? 'rgba(255, 107, 107, 0.9)' : 'rgba(255, 255, 255, 0.9)';
-            detailedInfoContainer.textContent = detailedInfo;
-
-            // Add event listeners
-            let expanded = false;
-            let hideTimeoutId = null;
-            
-            infoBtn.onmouseover = function() {
-                infoBtn.style.color = isError ? '#ff6b6b' : '#ffffff';
-                infoBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            };
-            
-            infoBtn.onmouseout = function() {
-                infoBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-                infoBtn.style.backgroundColor = 'transparent';
-            };
-            
-            closeBtn.onmouseover = function() {
-                closeBtn.style.color = isError ? '#ff6b6b' : '#ffffff';
-                closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            };
-            
-            closeBtn.onmouseout = function() {
-                closeBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-                closeBtn.style.backgroundColor = 'transparent';
-            };
-            
-            infoBtn.onclick = function() {
-                expanded = !expanded;
-                detailedInfoContainer.style.display = expanded ? 'block' : 'none';
-                infoBtn.innerHTML = expanded ? 
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' : 
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-                
-                // Clear the auto-hide timeout when info is expanded
-                if (expanded) {
-                    if (hideTimeoutId) {
-                        clearTimeout(hideTimeoutId);
-                        hideTimeoutId = null;
-                    }
-                } else {
-                    // Restart the auto-hide timer when info is collapsed
-                    hideTimeoutId = setTimeout(() => {
-                        toast.style.opacity = '0';
-                        toast.style.transform = 'translateY(10px) translateX(-50%)';
-                        setTimeout(() => toast.remove(), 300);
-                    }, 5000);
-                }
-            };
-            
-            closeBtn.onclick = function() {
-                // Clear any existing timeout
-                if (hideTimeoutId) {
-                    clearTimeout(hideTimeoutId);
-                    hideTimeoutId = null;
-                }
-                
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px) translateX(-50%)';
-                setTimeout(() => toast.remove(), 300);
-            };
-
-            // Assemble the toast
-            buttonsContainer.appendChild(infoBtn);
-            buttonsContainer.appendChild(closeBtn);
-            headerContainer.appendChild(messageContainer);
-            headerContainer.appendChild(buttonsContainer);
-            
-            toast.appendChild(headerContainer);
-            toast.appendChild(detailedInfoContainer);
-            
-            document.body.appendChild(toast);
-
-            // Add entrance animation
-            toast.style.transform = 'translateY(10px) translateX(-50%)';
-            setTimeout(() => {
-                toast.style.transform = 'translateY(0) translateX(-50%)';
-            }, 10);
-
-            // Set initial auto-hide timeout
-            hideTimeoutId = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px) translateX(-50%)';
-                setTimeout(() => toast.remove(), 300);
-            }, 5000);
-        },
-        args: [message, isError, opacity, detailedInfo]
-    });
-}
 // Show a spinner toast while AI query is being processed
 async function showSpinnerToast(tabId, message = 'Processing your request...') {
     const opacity = await getToastOpacity();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NeoExamShield",
-  "version": "1.5.1",
+  "version": "2.0",
   "description": "Unlock your potential with NeoExamShield - AI assistance for educational platforms.",
   "background": {
     "service_worker": "worker.js"
@@ -129,6 +129,13 @@
     }
   ],
   "commands": {
+    "ai-solve": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+A",
+        "mac": "MacCtrl+Shift+A"
+      },
+      "description": "Auto Solve with AI Integration"
+    },
     "search-mcq": {
       "suggested_key": {
         "default": "Alt+Shift+M",
@@ -142,13 +149,6 @@
         "mac": "Alt+Shift+S"
       },
       "description": "Solve MCQs"
-    },
-    "nptel": {
-      "suggested_key": {
-        "default": "Alt+Shift+N",
-        "mac": "Alt+Shift+N"
-      },
-      "description": "nptel"
     },
     "customPaste": {
       "suggested_key": {

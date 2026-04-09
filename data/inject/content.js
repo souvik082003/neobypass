@@ -308,6 +308,21 @@ function extractCodingQuestion() {
         testCasesText = 'No test cases found. Please check the page structure.';
     }
 
+    // Extract snippets (header and footer)
+    const headerContainer = Array.from(document.querySelectorAll('div[aria-labelledby="tt-header"]'))
+        .find(container => container.innerText.includes('Header Snippet'));
+    const footerContainer = Array.from(document.querySelectorAll('div[aria-labelledby="footer"]'))
+        .find(container => container.innerText.includes('Footer Snippet'));
+
+    const extractCode = container => {
+        if (!container) return '';
+        const codeLines = container.querySelectorAll('.ace_line');
+        return Array.from(codeLines).map(line => line.textContent).join('\n');
+    };
+
+    const headerSnippet = extractCode(headerContainer);
+    const footerSnippet = extractCode(footerContainer);
+
     // Send data to background.js for querying
     chrome.runtime.sendMessage({
         action: 'extractData',
@@ -316,6 +331,8 @@ function extractCodingQuestion() {
         inputFormat: inputFormatText,
         outputFormat: outputFormatText,
         testCases: testCasesText,
+        headerSnippet: headerSnippet,
+        footerSnippet: footerSnippet,
         isCoding: true
     }, async (response) => {
         if (response && response.success && response.response) {
@@ -355,10 +372,11 @@ function solveIamneoExamly(){
         }
 }
 document.addEventListener('keydown', (event) => {
-    // Use Option (Alt) key on all platforms
-    const modifierKey = event.altKey;
+    // Use Ctrl/Cmd key based on user request
+    const modifierKey = event.ctrlKey || event.metaKey;
     
-    if (modifierKey && event.shiftKey && event.code === 'KeyA') {
+    if (modifierKey && event.shiftKey && (event.code === 'KeyA' || event.key === 'a' || event.key === 'A')) {
+        event.preventDefault();
         solveIamneoExamly();
     }
 });
