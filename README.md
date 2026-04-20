@@ -1,4 +1,4 @@
-[Download](https://github.com/souvik082003/ExamlyPass/archive/refs/heads/main.zip) the extension
+[Download](https://github.com/souvik082003/neobypass/archive/refs/heads/main.zip) the extension
 # <i>**`Free`** NeoExamShield Extension</i>
 
 
